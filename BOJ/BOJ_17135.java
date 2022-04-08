@@ -1,18 +1,12 @@
-/*
- * 소요 시간 : 220ms
- * 메모리 사용량 : 37,420kb
- */
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Queue;
+import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-public class BOJ_17135 {
+public class BOJ_17135_1 {
 	
 	static class Point {
 		int r, c;
@@ -37,13 +31,12 @@ public class BOJ_17135 {
 			}
 			return super.equals(obj);
 		}
+		
 	}
 	
-	static int N, M, D, max, total;
+	static int N, M, D, max;
 	static int[] archer;
-	static boolean[][] map, temp;
-	static int[] dr = {0, -1, 0};
-	static int[] dc = {-1, 0, 1};
+	static List<Point> enemy, targets;
 
 	public static void main(String[] args) throws Exception {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -52,13 +45,12 @@ public class BOJ_17135 {
 		M = Integer.parseInt(st.nextToken());
 		D = Integer.parseInt(st.nextToken());
 		archer = new int[3];
-		map = new boolean[N+1][M];
-		temp = new boolean[N+1][M];
+		enemy = new LinkedList<>();
+		targets = new LinkedList<>();
 		for(int i=0; i<N; i++) {
 			st = new StringTokenizer(br.readLine(), " ");
 			for(int j=0; j<M; j++) {
-				map[i][j] = st.nextToken().equals("1") ? true : false;
-				if(map[i][j]) total++;
+				if(st.nextToken().equals("1")) enemy.add(new Point(i, j));
 			}
 		}
 		combination(0, 0);
@@ -79,71 +71,56 @@ public class BOJ_17135 {
 		}
 	}
 	
-	public static Point find(int col) {
-		Queue<Point> queue = new LinkedList<>();
-		boolean[][] visited = new boolean[N+1][M];
+	public static int go() {
+		for(Point e : enemy) targets.add(e);
 		
-		queue.offer(new Point(N-1, col));
-		visited[N-1][col] = true;
-		
-		int dist = 1;
-		while(!queue.isEmpty() && dist <= D) {
-			int size = queue.size();
-			for(int i=0; i<size; i++) {
-				Point current = queue.poll();
-				
-				if(temp[current.r][current.c]) return current;
-				
-				for(int d=0; d<3; d++) {
-					int nr = current.r + dr[d];
-					int nc = current.c + dc[d];
-					if(nr<0 || nr>=N || nc<0 || nc>=M || visited[nr][nc]) continue;
-					visited[nr][nc] = true;
-					queue.offer(new Point(nr, nc));
-				}
-			}
-			dist++;
+		int count = 0;
+		while(!targets.isEmpty()) {
+			count += shoot();
+			move();
 		}
-		return null;
+		return count;
 	}
 	
+	public static Point find(int col) {
+		int dist, minDist = D+1, minIdx = -1;
+		for(int i=0; i<targets.size(); i++) {
+			Point target = targets.get(i);
+			dist = (N - target.r) + Math.abs(col - target.c);
+			if(dist > D) continue;
+			if(minDist > dist) {
+				minDist = dist;
+				minIdx = i;
+			} else if(minDist == dist) {
+				if(targets.get(minIdx).c > target.c) minIdx = i;
+			}
+		}
+		if(minIdx >=0 )return targets.get(minIdx);
+		else return null;
+	}
+	
+	
 	public static int shoot() {
+		int count = 0;
 		Set<Point> removeSet = new HashSet<>();
+		
 		for(int col : archer) {
 			Point target = find(col);
 			if(target != null) removeSet.add(target);
 		}
 		for(Point target : removeSet) {
-			temp[target.r][target.c] = false;
+			targets.remove(target);
+			count++;
 		}
-		return removeSet.size();
+		return count;
 	}
 	
-	public static int move() {
-		for(int i=N; i>0 ; i--) {
-			for(int j=0; j<M; j++) {
-				temp[i][j] = temp[i-1][j];
-			}
+	public static void move() {
+		for(int i=targets.size()-1; i>=0; i--) {
+			Point target = targets.get(i);
+			if(target.r == N-1) targets.remove(i);
+			else targets.set(i, new Point(target.r+1, target.c));
 		}
-		Arrays.fill(temp[0], false);
-		int save = 0;
-		for(int i=0; i<M; i++) {
-			if(temp[N][i]) save++;
-		}
-		
-		return save;
-	}
-	
-	public static int go() {
-		for(int i=0; i<N; i++) temp[i] = Arrays.copyOf(map[i], M);
-		
-		int shootCnt = 0, saveCnt = 0;
-		while(shootCnt + saveCnt < total) {
-			shootCnt += shoot();
-			saveCnt += move();
-		}
-		return shootCnt;
-		
 	}
 
 }
